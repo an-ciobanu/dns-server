@@ -24,20 +24,26 @@ func main() {
 
 	for {
 		buff := make([]byte, 1024) //creeam bufferul in care primim requestul la server
-		_, addr, err := udpServer.ReadFrom(buff)
+		n, addr, err := udpServer.ReadFrom(buff)
 		if err != nil {
 			fmt.Println(fmt.Errorf("Error in processing a read: %v", err))
 			continue
 		}
 		//creem un go routine care sa prelucreze separat requestul
-		go handleRequest(udpServer, addr, buff)
+		go func(addr net.Addr, buff []byte) {
+			domain, qType, qClass, err := handleRequest(buff[:n]) // prelucrăm doar partea utilizată din buffer
+			if err != nil {
+				fmt.Println(fmt.Errorf("Error in handling q reqeust: %v", err))
+			}
+			sendResponse(udpServer, addr, domain, qType, qClass)
+		}(addr, buff)
 	}
 }
 
 /*
 *	handleRequest: functie care va prelucra reqeustul primit la serverul DNS
  */
-func handleRequest(udpServer net.PacketConn, addr net.Addr, buff []byte) (string, uint16, uint16, error) {
+func handleRequest(buff []byte) (string, uint16, uint16, error) {
 
 	if len(buff) < 12 {
 		//cererea e invalida, nu avem nici macar headerul corect
@@ -69,4 +75,11 @@ func handleRequest(udpServer net.PacketConn, addr net.Addr, buff []byte) (string
 	qClass := binary.BigEndian.Uint16(buff[offset+2 : offset+4])
 
 	return domain, qType, qClass, nil
+}
+
+func searchDomain(filename string, domain string) (string, error) {
+	return "192.168.100.101", nil
+}
+
+func sendResponse(udpServer net.PacketConn, addr net.Addr, domain string, qType uint16, qClass uint16) {
 }
