@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"strings"
 )
 
@@ -78,7 +80,46 @@ func handleRequest(buff []byte) (string, uint16, uint16, error) {
 }
 
 func searchDomain(filename string, domain string) (string, error) {
-	return "192.168.100.101", nil
+
+	file, err := os.Open(filename)
+	if err != nil {
+		return "", errors.New("Error in opening zone file")
+	}
+
+	//inchidem fisierul
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		line = strings.TrimSpace(line)
+
+		//daca linia e goala sau e comentariu, ignoram
+		if line == "" || strings.HasPrefix(line, ";") {
+			continue
+		}
+
+		fields := strings.Fields(line)
+		//daca gasim un rand care sa fie o inregistrare IP
+		if len(fields) >= 4 && fields[1] == "IN" && fields[2] == "A" {
+			recordDomain := fields[0]
+			ipAddress := fields[3]
+
+			if recordDomain == "@" && domain == "dns-server.com" {
+				return ipAddress, nil
+			} else if recordDomain == domain || recordDomain+"."+domain == domain {
+				return ipAddress, nil
+			}
+		}
+	}
+
+	// verificam daca nu a aparut o eraore
+	if err := scanner.Err(); err != nil {
+		return "", fmt.Errorf("Error reading file: %v", err)
+	}
+
+	// domaniul nu esista in fisier
+	return "", fmt.Errorf("Domain %s is not in the file", domain)
 }
 
 func sendResponse(udpServer net.PacketConn, addr net.Addr, domain string, qType uint16, qClass uint16) {
