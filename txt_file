@@ -1,0 +1,16 @@
+$TTL 86400         ; Time to live pentru toate înregistrările din această zonă (86400 secunde = 1 zi)
+@    IN  SOA   ns1.google.com. admin.google.com. (
+               2024103001  ; Serial number (modificat la fiecare actualizare)
+               3600        ; Refresh interval (1 oră)
+               1800        ; Retry interval (30 minute)
+               1209600     ; Expire interval (2 săptămâni)
+               86400       ; Minimum TTL (1 zi)
+               )
+
+; Serverele de nume (Name Servers) pentru acest domeniu
+     IN  NS    ns1.google.com.
+     IN  NS    ns2.google.com.
+
+; Înregistrări A pentru domeniu și subdomenii
+@    IN  A     142.250.201.206         ; `google.com` mapat la adresa IP 192.0.2.1
+www  IN  A     142.250.201.206         ; `www.google.com` mapat la aceeași adresă IP

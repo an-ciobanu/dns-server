@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -37,7 +38,7 @@ func main() {
 			if err != nil {
 				fmt.Println(fmt.Errorf("Error in handling q reqeust: %v", err))
 			}
-			ip, err := searchDomain("txt_file", domain)
+			ip, err := searchDomain("./txt_file", domain)
 			if err != nil {
 				fmt.Println(fmt.Errorf("Error in getting ip: %v", err))
 			}
@@ -109,7 +110,7 @@ func searchDomain(filename string, domain string) (string, error) {
 			recordDomain := fields[0]
 			ipAddress := fields[3]
 
-			if recordDomain == "@" && domain == "dns-server.com" {
+			if recordDomain == "@" && domain == "google.com" {
 				return ipAddress, nil
 			} else if recordDomain == domain || recordDomain+"."+domain == domain {
 				return ipAddress, nil
@@ -127,5 +128,60 @@ func searchDomain(filename string, domain string) (string, error) {
 }
 
 func sendResponse(udpServer net.PacketConn, addr net.Addr, domain, ip string, request []byte) error {
+	var buffer bytes.Buffer
+
+	//prima parte a raspunsului e la fel ca reqeustul
+	id := binary.BigEndian.Uint16(request[:2])
+	flags := uint16(0x8180) //Setam flagul de raspuns
+	qdCount := uint16(1)    //Numar intrebari
+	anCount := uint16(1)    //Numar rapsunsuri
+
+	//Sectiuni nefolosite in DNS
+	nsCount := uint16(0)
+	arCount := uint16(0)
+
+	//Scriem headerul responseului
+	binary.Write(&buffer, binary.BigEndian, id)
+	binary.Write(&buffer, binary.BigEndian, flags)
+	binary.Write(&buffer, binary.BigEndian, qdCount)
+	binary.Write(&buffer, binary.BigEndian, anCount)
+	binary.Write(&buffer, binary.BigEndian, nsCount)
+	binary.Write(&buffer, binary.BigEndian, arCount)
+
+	//preluam sectiunea de question din request
+	offset := 12
+
+	for request[offset] != 0 {
+		buffer.WriteByte(request[offset])
+		offset++
+	}
+	buffer.WriteByte(0) // Adaugam terminatorul de domeniu
+	offset++            // Sarim peste terminator
+
+	buffer.Write(request[offset : offset+4])
+
+	buffer.WriteByte(192)
+	buffer.WriteByte(12)
+
+	binary.Write(&buffer, binary.BigEndian, uint16(1)) //Tipul A
+	binary.Write(&buffer, binary.BigEndian, uint16(1)) //Clasa IN
+
+	binary.Write(&buffer, binary.BigEndian, uint32(300)) //TTL 300
+
+	binary.Write(&buffer, binary.BigEndian, uint16(4)) //lungimea datelor
+	//Scriem datele IP
+	ipBytes := net.ParseIP(ip).To4()
+	if ipBytes == nil {
+		return fmt.Errorf("IP invalid: %s", ip)
+	}
+	for _, partByte := range ipBytes {
+		buffer.WriteByte(partByte)
+	}
+
+	//trimitem raspunsul la client
+	_, err := udpServer.WriteTo(buffer.Bytes(), addr)
+	if err != nil {
+		return fmt.Errorf("error sending response: %v", err)
+	}
 	return nil
 }

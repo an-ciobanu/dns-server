@@ -152,21 +152,18 @@ func TestSendResponse(t *testing.T) {
 
 	// sarim peste header
 	offset := 12
-	expectedQuestion := request[12:]
+	expectedQuestion := request[offset:]
 	if !bytes.Equal(response[offset:offset+len(expectedQuestion)], expectedQuestion) {
 		t.Errorf("Malformed question section: got %v, want %v", response[offset:offset+len(expectedQuestion)], expectedQuestion)
 	}
 
 	// Verificăm secțiunea Answer
-	offset += len(expectedQuestion)
-	// Check domain name
 	expectedDomain := []byte{0x06, 'g', 'o', 'o', 'g', 'l', 'e', 0x03, 'c', 'o', 'm', 0x00}
-	if !bytes.Equal(response[offset:offset+len(expectedDomain)], expectedDomain) {
-		t.Errorf("Incorrec domain name: got %v, want %v", response[offset:offset+len(expectedDomain)], expectedDomain)
+	if !bytes.Equal(response[offset:24], expectedDomain) {
+		t.Errorf("Incorrect domain name: got %v, want %v", response[12:24], expectedDomain)
 	}
 	offset += len(expectedDomain)
 
-	// Check type and class
 	expectedType := uint16(1)  // Type A
 	expectedClass := uint16(1) // Class IN
 	if binary.BigEndian.Uint16(response[offset:offset+2]) != expectedType {
