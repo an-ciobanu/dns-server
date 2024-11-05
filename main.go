@@ -33,11 +33,15 @@ func main() {
 		}
 		//creem un go routine care sa prelucreze separat requestul
 		go func(addr net.Addr, buff []byte) {
-			domain, qType, qClass, err := handleRequest(buff[:n]) // prelucrăm doar partea utilizată din buffer
+			domain, _, _, err := handleRequest(buff[:n]) // prelucrăm doar partea utilizată din buffer
 			if err != nil {
 				fmt.Println(fmt.Errorf("Error in handling q reqeust: %v", err))
 			}
-			sendResponse(udpServer, addr, domain, qType, qClass)
+			ip, err := searchDomain("txt_file", domain)
+			if err != nil {
+				fmt.Println(fmt.Errorf("Error in getting ip: %v", err))
+			}
+			sendResponse(udpServer, addr, domain, ip, buff[:n])
 		}(addr, buff)
 	}
 }
@@ -122,5 +126,6 @@ func searchDomain(filename string, domain string) (string, error) {
 	return "", fmt.Errorf("Domain %s is not in the file", domain)
 }
 
-func sendResponse(udpServer net.PacketConn, addr net.Addr, domain string, qType uint16, qClass uint16) {
+func sendResponse(udpServer net.PacketConn, addr net.Addr, domain, ip string, request []byte) error {
+	return nil
 }
