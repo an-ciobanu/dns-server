@@ -34,4 +34,6 @@ func main() {
 /*
 *	handleRequest: functie care va prelucra reqeustul primit la serverul DNS
  */
-func handleRequest(udpServer net.PacketConn, addr net.Addr, buff []byte) {}
+func handleRequest(udpServer net.PacketConn, addr net.Addr, buff []byte) (string, uint16, uint16, error) {
+	return "", uint16(1), uint16(1), nil
+}
